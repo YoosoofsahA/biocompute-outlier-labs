@@ -15,10 +15,11 @@ that these are **simulated** neurons.
    bigger response can only mean change."
 6. **What we built tonight:** "We built it on the organisers' simulator and added neuron adaptation, so the same code
    runs on a real CL1."
-7. **Response chart:** "The response drops as the culture gets used to fresh banana, then crosses the alarm line 12
-   checks after browning starts, before any mould."
-8. **Cut the callosum:** "Cut the link to the living hemisphere and the system forgets early browning: it waits 26
-   checks for mould instead of 12."
+7. **The dish spots browning before any mould:** "A check is one look at the fruit, every two seconds, and spoiling
+   takes 60 checks. The dish raised the alarm 12 checks into browning, when the fruit had only just started to turn;
+   silicon needed 26, because it can only see the mould."
+8. **Cut the callosum:** "Cut the link to the living hemisphere and the alarm waits for the mould: 26 checks, not 12.
+   Lower is earlier."
 9. **Why we trust it:** "A new fruit gets about twice the adapted response, every image gets the same 12 pulses, and
    with adaptation off the dish never fires, so this is change detection, not tiredness."
 10. **What the dish taught us:** "Timing matters, the signal lives on the electrodes we stimulate, and this is one
@@ -26,5 +27,9 @@ that these are **simulated** neurons.
 11. **New food, no new data:** "Switching to strawberry took 30 fresh checks and zero photos of rotten strawberries."
 12. **The ask:** "The same script runs on a CL1 in about 9 minutes; give us one day to see if real neurons do what our
     simulated ones did, then teach the callosum how far to trust each hemisphere."
+
+**If asked what "12 checks" means:** a check is one look at the fruit (one test image every 2 s). Spoiling runs 60
+checks from the first hint of browning to full mould. The dish's first alarm came on check 12, about a fifth of the
+way in; silicon's on check 26, when the mould spots appear. On strawberry the dish fired at 11. Lower is earlier.
 
 Numbers come from `results.md` (scored run 1, seed 42, simulated culture).
