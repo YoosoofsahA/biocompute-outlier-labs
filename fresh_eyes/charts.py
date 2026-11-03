@@ -77,13 +77,14 @@ def main() -> None:
         summary[food] = {"hybrid": score(hybrid, spoiled), "dish only": score(d["dish_alarm"], spoiled),
                          "silicon only": score(d["silicon_alarm"], spoiled)}
 
-        ax.plot(frames, d["response_size"], color="#0F766E", label="dish response (spikes)")
+        signal = info.get("baseline_signal", "response_size")   # real runs alarm on the input electrodes
+        ax.plot(frames, d[signal], color="#0F766E", label=f"dish response ({signal})")
         ax.axhline(info["baseline"] * info["margin"], color="#C2410C", ls="--", label="dish alarm threshold")
         for onset, label, colour in ((SPOIL_ONSET, "spoilage onset", "#B45309"), (MOULD_ONSET, "mould onset", "#374151")):
             if (d["t"] >= onset).any():
                 ax.axvline(frames[np.argmax(d["t"] >= onset)], color=colour, ls=":", label=label)
         dish_hits = d["dish_alarm"].astype(bool)
-        ax.scatter(frames[dish_hits], d["response_size"][dish_hits], s=12, color="#C2410C", zorder=3)
+        ax.scatter(frames[dish_hits], d[signal][dish_hits], s=12, color="#C2410C", zorder=3)
         tag = "FAKE DATA" if meta.get("fake") else "simulated culture"
         ax.set_title(f"{food}: dish response over frames ({tag})")
         ax.set_xlabel("frame")

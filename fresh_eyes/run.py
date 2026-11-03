@@ -59,9 +59,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--margin", type=float, default=1.5, help="dish alarm when response > baseline * margin")
     p.add_argument("--no-refresh", action="store_true", help="control: don't re-show the fresh reference")
     p.add_argument("--seed", type=int, default=42)
-    p.add_argument("--coupling-mv", type=float, default=2.0)
-    p.add_argument("--adaptation-mv", type=float, help="needs role 1's simulator change")
-    p.add_argument("--adaptation-tau-ms", type=float, help="needs role 1's simulator change")
+    p.add_argument("--coupling-mv", type=float, default=1.0, help="frozen by role 1's repeat test")
+    p.add_argument("--adaptation-mv", type=float, default=4.0, help="frozen by role 1; 0 is the no-adaptation control")
+    p.add_argument("--adaptation-tau-ms", type=float, help="simulator default 2000")
     p.add_argument("--out", default="runs")
     return p.parse_args()
 
@@ -105,20 +105,22 @@ def write_food(run_dir: Path, food: str, checks: list[Check], margin: float) -> 
     """Score one food's checks, write its CSV and return its calibration summary."""
     cal = [c for c in checks if c.food == food and not c.live]
     live = [c for c in checks if c.food == food and c.live]
-    cal_responses = [c.response_in + c.response_out for c in cal]
+    # The dish alarm reads the input electrodes only: that's where stimulus-specific adaptation shows, while
+    # whole-dish counts are dominated by spontaneous firing.
+    cal_responses = [c.response_in for c in cal]
     baseline = float(np.mean(cal_responses[-BASELINE_CHECKS:]))
     edge_mean, edge_std = calibrate([c.edge for c in cal])
     with (run_dir / f"{food}.csv").open("w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow(COLUMNS)
         for c in live:
-            response = c.response_in + c.response_out
-            writer.writerow([c.frame, f"{c.t:.3f}", int(c.is_spoiled), sum(c.pattern.values()), response,
-                             c.response_in, c.response_out, f"{c.edge:.3f}",
-                             int(dish_alarm(response, baseline, margin)),
+            writer.writerow([c.frame, f"{c.t:.3f}", int(c.is_spoiled), sum(c.pattern.values()),
+                             c.response_in + c.response_out, c.response_in, c.response_out, f"{c.edge:.3f}",
+                             int(dish_alarm(c.response_in, baseline, margin)),
                              int(silicon_alarm(c.edge, edge_mean, edge_std))])
-    return {"baseline": baseline, "margin": margin, "edge_mean": edge_mean, "edge_std": edge_std,
-            "calibration_responses": cal_responses}
+    return {"baseline": baseline, "baseline_signal": "response_in", "margin": margin, "edge_mean": edge_mean,
+            "edge_std": edge_std, "calibration_responses": cal_responses,
+            "calibration_responses_total": [c.response_in + c.response_out for c in cal]}
 
 
 def main() -> None:

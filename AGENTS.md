@@ -164,9 +164,13 @@ strawberry.
 
 ### Role 4: Dish runner
 
+**Status: steps 2 to 4 DONE.** `run.py` defaults to the frozen settings, the dish alarm reads `response_in`, and the
+margin is frozen at 1.5. `results.md` records the settings and lists the scored runs. **Still to do:** the scored
+runs (step 5) and the real-time run (step 6), once roles 2 and 3 have merged.
+
 **Goal:** produce the results: one run per experiment, using frozen settings, with the run folders recorded.
 
-**Files:** `fresh_eyes/run.py`, `fresh_eyes/dish.py`, and `results.md` (create it).
+**Files:** `fresh_eyes/run.py`, `fresh_eyes/dish.py`, and `results.md`.
 
 `run.py` already works end to end. Your job is running the experiments correctly, not rewriting it.
 
