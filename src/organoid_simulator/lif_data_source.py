@@ -512,6 +512,7 @@ class LIFDataSource(SimulatorDataSource):
         # read() calls because a pulse / spike waveform can span into the next batch.
         self._pending_current   : dict[int, np.ndarray] = {}   # ts -> (64,) uA (signed)
         self._pending_waveform  : dict[int, np.ndarray] = {}   # ts -> (64,) uV additive
+        self._next_read_ts      : int = 0                      # first frame the next read() produces
 
     @property
     def metadata(self) -> SimulatorDataSourceMetadata:
@@ -561,8 +562,9 @@ class LIFDataSource(SimulatorDataSource):
 
         self._pending_current.clear()
         self._pending_waveform.clear()
+        self._next_read_ts = 0
 
-        mode = f"spatial ({n} neurons -> {CHANNEL_COUNT} electrodes)" if self._spatial else "1:1 (64 neurons)"
+        mode =f"spatial ({n} neurons -> {CHANNEL_COUNT} electrodes)" if self._spatial else "1:1 (64 neurons)"
         print(f"LIF data source is using seed: {seed}  [{mode}]")
 
     def close(self) -> None:
@@ -584,14 +586,19 @@ class LIFDataSource(SimulatorDataSource):
         stim can drive a spike in the very batch it lands in. Storing current at the
         exact frame timestamp (rather than bumping "now") preserves stim->spike
         latency instead of quantising it to a whole tick.
+
+        In real time the producer can already have generated a stim's frames by
+        the time the stim arrives. Such a stim is delivered at the first frame
+        still to be read rather than dropped as stale.
         """
         for stim in stims:
+            start_ts     = max(int(stim.timestamp), self._next_read_ts)
             frame_offset = 0
             for duration_us, current_uA in zip(stim.phase_durations_us, stim.phase_currents_uA):
                 # A 20 us phase is shorter than one 40 us frame; never drop it.
                 n_frames = max(1, round(duration_us / US_PER_FRAME))
                 for k in range(n_frames):
-                    ts  = int(stim.timestamp) + frame_offset + k
+                    ts  = start_ts + frame_offset + k
                     vec = self._pending_current.get(ts)
                     if vec is None:
                         vec = np.zeros(CHANNEL_COUNT, dtype=np.float64)
@@ -751,6 +758,7 @@ class LIFDataSource(SimulatorDataSource):
 
         self._V = V
         self._fired_prev = fired_prev
+        self._next_read_ts = to_timestamp
 
         frames = np.clip(
             np.round(frames_uV / UV_PER_SAMPLE_UNIT), INT16_MIN, INT16_MAX
