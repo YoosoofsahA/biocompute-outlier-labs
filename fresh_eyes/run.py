@@ -24,7 +24,7 @@ import cl
 import numpy as np
 
 from alarm import calibrate, dish_alarm, silicon_alarm
-from dish import COUNT_TICKS, REFERENCE_TICK, TICKS_PER_CHECK, TICKS_PER_SECOND, sim_config, stimulate, use_lif
+from dish import COUNT_TICKS, REFERENCE_TICKS, TICKS_PER_CHECK, TICKS_PER_SECOND, sim_config, stimulate, use_lif
 from edges import edge_score
 from encode import INPUT_ELECTRODES, PULSE_BUDGET, encode
 from images import make_stream
@@ -97,7 +97,7 @@ def run_dish(checks: list[Check], refresh: bool) -> None:
                         check.response_out += 1
             if phase == 0:
                 stimulate(neurons, check.pattern)
-            elif phase == REFERENCE_TICK and check.live and refresh:
+            elif phase in REFERENCE_TICKS and refresh:
                 stimulate(neurons, references[check.food])
 
 

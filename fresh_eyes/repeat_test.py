@@ -18,10 +18,11 @@ import argparse
 import cl
 import numpy as np
 
-from dish import COUNT_TICKS, TICKS_PER_CHECK, TICKS_PER_SECOND, sim_config, stimulate, use_lif
+from dish import COUNT_TICKS, TICKS_PER_SECOND, sim_config, stimulate, use_lif
 
 PATTERN_A = {9: 6, 10: 6}    # yellow group: fresh banana
 PATTERN_B = {49: 6, 50: 6}   # red group: fresh strawberry, same 12-pulse budget
+TICKS_PER_CHECK = 10         # 0.5 s per presentation; this test predates the 2 s oddball schedule
 NOVELTY_MIN = 1.5            # B must clear the adapted baseline by the dish alarm's margin
 
 

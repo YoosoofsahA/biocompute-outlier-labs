@@ -7,9 +7,9 @@ STIM = cl.StimDesign(200, -1.5, 200, 1.5)   # biphasic, cathodic first, 0.3 nC p
 BURST_HZ = 100                              # pulses 10 ms apart, so each can fire the neuron
 RESERVED = frozenset({0, 4, 7, 56, 63})
 TICKS_PER_SECOND = 20
-TICKS_PER_CHECK = 10                        # one check every 0.5 s
+TICKS_PER_CHECK = 40                        # one test frame every 2 s (oddball: rare test, frequent fresh reference)
 COUNT_TICKS = (1, 2)                        # response window: the 100 ms after the stim on tick 0
-REFERENCE_TICK = 5                          # fresh reference re-shown here, not counted
+REFERENCE_TICKS = (10, 20, 30)              # fresh reference re-shown here, not counted
 
 
 def sim_config(seed: int, coupling_mV: float, adaptation_mV: float | None, adaptation_tau_ms: float | None) -> dict:
