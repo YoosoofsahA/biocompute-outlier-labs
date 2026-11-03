@@ -116,11 +116,16 @@ adaptation, which real neurons have, in `src/organoid_simulator/lif_data_source.
 4. Change both threshold checks (the two `fired = (V >= self._v_thresh) ...` lines) to `V >= self._v_thresh + theta`.
 5. After `fired` is computed: `theta[fired] += self._adaptation_mV`. Write it back to `self._theta` at the end, as
    `V` is.
-6. Run with config `{"random_seed": 42, "coupling_gain_mV": 2.0, "adaptation_mV": 1.0}`.
+6. **Frozen config (done):** `{"coupling_gain_mV": 1.0, "adaptation_mV": 4.0}`, `adaptation_tau_ms` left at 2000.
 
-**Repeat-the-same-stimulus test (do this before anything else):** show the fresh-banana pattern 20 times, then the
-fresh-strawberry pattern once. Pass if the banana response drops clearly over the 20 repeats *and* the strawberry
-response comes back near the first banana response. Tune in this order:
+**Repeat-the-same-stimulus test (`fresh_eyes/repeat_test.py`):** show the fresh-banana pattern 20 times, then the
+fresh-strawberry pattern once. Pass if the whole-dish banana response drops below 0.7 of its first value *and*, on
+the stimulated electrodes, strawberry's response is at least 1.5x the adapted banana response. With the frozen
+config it passes on 4 of 5 seeds (the fifth gives 1.46); with adaptation off the ratio is about 1.0.
+
+Strawberry doesn't return all the way to banana's first response: spontaneous firing on every channel adapts too,
+so the whole culture quietens. The novelty is clean on the stimulated electrodes and noisy across the whole dish,
+so **the dish alarm should use `response_in` (input electrodes), not `response_size`.** Tune in this order:
 
 - Response doesn't drop: raise `adaptation_mV` (0.5 to 3).
 - Drops, but strawberry doesn't rebound: lower `coupling_gain_mV` (shared downstream neurons are adapting to

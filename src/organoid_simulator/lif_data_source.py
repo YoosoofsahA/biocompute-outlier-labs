@@ -337,6 +337,8 @@ class LIFDataSource(SimulatorDataSource):
         spike_amplitude_lognorm_sigma: float = 0.55,
         force_spatial             : bool | None = None,
         separate_noise_streams     : bool = False,
+        adaptation_mV             : float = 0.0,
+        adaptation_tau_ms         : float = 2000.0,
     ):
         """
         Args:
@@ -419,6 +421,12 @@ class LIFDataSource(SimulatorDataSource):
             separate_noise_streams: Keep background drive and recording noise
                 on independent seeded streams, so read batch boundaries do not
                 change the generated activity. Default False preserves old runs.
+            adaptation_mV: OPT-IN spike-frequency adaptation. Each spike raises
+                that neuron's firing threshold by this much (mV); the raise decays
+                back with adaptation_tau_ms. Repeated stimulation of the same
+                neurons then gets a smaller response, while unadapted neurons still
+                respond fully. 0 (default) disables it and leaves dynamics unchanged.
+            adaptation_tau_ms: Decay time constant of the adaptive threshold (ms).
         """
         # NB: __init__ runs in BOTH the parent and the simulator subprocess. Keep it
         # to storing plain config; all mutable simulation state is created in open().
@@ -455,6 +463,9 @@ class LIFDataSource(SimulatorDataSource):
 
         self._leak_coeff = MS_PER_FRAME / self._tau_mem_ms   # dt/tau per Euler step
         self._elig_decay = float(np.exp(-MS_PER_FRAME / eligibility_tau_ms))
+
+        self._adaptation_mV = float(adaptation_mV)
+        self._theta_decay   = float(np.exp(-MS_PER_FRAME / adaptation_tau_ms))
 
         # -- spatial mode (n_units != CHANNEL_COUNT) --------------------------
         self._n_units          = int(n_units)
@@ -495,6 +506,7 @@ class LIFDataSource(SimulatorDataSource):
         self._noise_rng         : np.random.Generator | None = None
         self._V                 : np.ndarray | None = None
         self._refractory_until  : np.ndarray | None = None
+        self._theta             : np.ndarray | None = None   # adaptive threshold raise (mV)
         self._fired_prev        : np.ndarray | None = None
         self._adjacency         : np.ndarray | None = None
         self._spike_template    : np.ndarray | None = None
@@ -536,6 +548,7 @@ class LIFDataSource(SimulatorDataSource):
         n = self._n_units
         self._V                = np.full(n, self._v_rest, dtype=np.float64)
         self._refractory_until = np.full(n, -1, dtype=np.int64)
+        self._theta            = np.zeros(n, dtype=np.float64)
         self._fired_prev       = np.zeros(n, dtype=np.float64)
         self._spike_template   = self._build_spike_template()
 
@@ -573,6 +586,7 @@ class LIFDataSource(SimulatorDataSource):
         self._noise_rng = None
         self._V = None
         self._refractory_until = None
+        self._theta = None
         self._fired_prev = None
         self._pending_current.clear()
         self._pending_waveform.clear()
@@ -627,6 +641,9 @@ class LIFDataSource(SimulatorDataSource):
 
         V              = self._V
         refr_until     = self._refractory_until
+        theta          = self._theta          # updated in place, so it persists across reads
+        adapt_mV       = self._adaptation_mV
+        theta_decay    = self._theta_decay
         fired_prev     = self._fired_prev
         W              = self._W
         elig           = self._elig
@@ -690,10 +707,15 @@ class LIFDataSource(SimulatorDataSource):
             # channels never fire). In spatial mode every neuron may fire;
             # electrode gating instead happens in the projection (NON_SPIKING
             # channels are already zeroed there), so no mask is applied here.
+            if adapt_mV:
+                theta *= theta_decay
+            thresh = self._v_thresh + theta if adapt_mV else self._v_thresh
             if spatial:
-                fired = (V >= self._v_thresh) & ~in_refractory
+                fired = (V >= thresh) & ~in_refractory
             else:
-                fired = (V >= self._v_thresh) & ~in_refractory & self._spiking_mask
+                fired = (V >= thresh) & ~in_refractory & self._spiking_mask
+            if adapt_mV:
+                theta[fired] += adapt_mV
             V[fired] = self._v_reset
             refr_until[fired] = ts + self._refractory_frames
 

@@ -62,9 +62,13 @@ and what "done" means. When you're done, merge to `main` and tell the team.
 
 ### Role 1: Sim (adaptation change)
 
+**Status: DONE.** Adaptation is in the simulator (`adaptation_mV`, `adaptation_tau_ms`; off by default, and identical
+to before when off). **Frozen config: `coupling_gain_mV = 1.0`, `adaptation_mV = 4.0`, `adaptation_tau_ms = 2000`.**
+`repeat_test.py` passes on 4 of 5 seeds. See `fresh-eyes-spec.md` section 4 for the numbers. The steps below are
+kept as a record of what was changed.
+
 **Goal:** make repeated identical stimulation get a smaller response, while a different stimulus still gets a full
-one. The stock simulator has no adaptation, so `repeat_test.py` currently FAILS (the banana response drops only
-about 5%).
+one.
 
 **Files:** `src/organoid_simulator/lif_data_source.py`, `fresh_eyes/repeat_test.py`.
 
@@ -170,11 +174,14 @@ strawberry.
 
 1. Pull `main` every 10 minutes and run a short smoke test (`--n-cal 10 --n-fresh 10 --n-spoil 10`) so breakage
    shows up early.
-2. When role 1 posts the frozen values, set them as the defaults of `--coupling-mv`, `--adaptation-mv` and
-   `--adaptation-tau-ms` in `run.py`.
-3. Choose `--margin` from a fresh-only calibration run (set it so fresh frames don't alarm), then freeze it as the
+2. Set role 1's frozen values as the defaults in `run.py`: `--coupling-mv 1.0`, `--adaptation-mv 4.0`
+   (`--adaptation-tau-ms` can stay unset; the simulator's default is 2000).
+3. Make the dish alarm use `response_in` (spikes on the 12 input electrodes) instead of `response_size`. That's
+   where the stimulus-specific adaptation shows; whole-dish counts are dominated by spontaneous firing and are
+   noisy. Keep logging all three columns.
+4. Choose `--margin` from a fresh-only calibration run (set it so fresh frames don't alarm), then freeze it as the
    default **before** any scored run.
-4. Run the experiments with `CL_SDK_ACCELERATED_TIME=1`, from the repo root:
+5. Run the experiments with `CL_SDK_ACCELERATED_TIME=1`, from the repo root:
 
    | Experiment | Command flags |
    |---|---|
@@ -184,7 +191,7 @@ strawberry.
 
    One run covers the disconnect test because both alarms are logged on every row. The rebound is read from
    `meta.json`: the first strawberry calibration responses compared with the banana baseline.
-5. Do one **real-time** run (no `CL_SDK_ACCELERATED_TIME`) with `--foods banana` so role 5 can screen-record the
+6. Do one **real-time** run (no `CL_SDK_ACCELERATED_TIME`) with `--foods banana` so role 5 can screen-record the
    viewer.
 
 **Check:** every CSV row has `pulses_total = 12`; `meta.json` has the frozen `sim_config`.
