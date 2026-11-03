@@ -34,11 +34,24 @@ change elsewhere, tell the human, who asks the owner.
 
 | Role | Files |
 |---|---|
-| 1. Sim | `src/organoid_simulator/lif_data_source.py` (the adaptation change), plus its repeat-the-same-stimulus test |
+| 1. Sim | `src/organoid_simulator/lif_data_source.py` (the adaptation change), `fresh_eyes/repeat_test.py` |
 | 2. Images and colour | `fresh_eyes/images.py`, `fresh_eyes/encode.py` |
 | 3. Silicon | `fresh_eyes/edges.py`, `fresh_eyes/alarm.py` |
-| 4. Dish runner | `fresh_eyes/run.py` |
+| 4. Dish runner | `fresh_eyes/run.py`, `fresh_eyes/dish.py` (shared stim helpers and loop timing) |
 | 5. Pitch and charts | `fresh_eyes/charts.py` |
+
+Every file starts as a working stub, so the whole pipeline runs from the start. Each stub's docstring says what to
+replace. Keep the signatures; swap in the real logic.
+
+```bash
+CL_SDK_ACCELERATED_TIME=1 uv run python fresh_eyes/repeat_test.py --adaptation-mv 1.0   # role 1's pass/fail test
+CL_SDK_ACCELERATED_TIME=1 uv run python fresh_eyes/run.py --foods banana,strawberry     # full run -> runs/<ts>/
+uv run python fresh_eyes/charts.py runs/<ts>                                            # summary.png + table
+uv run python fresh_eyes/charts.py --fake runs/fake                                     # charts on fake data
+```
+
+`--adaptation-mv` and `--adaptation-tau-ms` fail until role 1's simulator change accepts them; leave them off until
+then.
 
 Shared files (`fresh-eyes-spec.md`, `AGENTS.md`, `pyproject.toml`): change them only when the human asks.
 
@@ -66,11 +79,16 @@ dish_alarm(response: int, baseline: float, margin: float) -> bool   # response >
 Images are `uint8` arrays of shape `(64, 64, 3)` on a `(245, 245, 245)` background. Foods: `"banana"`,
 `"strawberry"`.
 
-`run.py` writes one CSV per run to `runs/` with exactly these columns:
+`run.py` writes `runs/<timestamp>/<food>.csv`, one per food, with exactly these columns:
 
 ```
 frame, t, is_spoiled, pulses_total, response_size, response_in, response_out, edge_score, dish_alarm, silicon_alarm
 ```
+
+It also writes `runs/<timestamp>/meta.json`: the arguments, the simulator config, and per food the dish `baseline`,
+`margin`, `edge_mean`, `edge_std` and every `calibration_responses` value (for recalibration time). Both alarms are
+logged on every row, so dish only, silicon only and hybrid (either alarm) all come from one run. `runs/` is
+gitignored.
 
 ## Rules that protect the science
 
